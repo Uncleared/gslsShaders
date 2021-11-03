@@ -1,0 +1,119 @@
+#define PI 3.1415926538
+
+// this function converts degrees to radians
+float degreeToRadians(float deg) {
+    return deg * (PI/180.0);
+}
+// pass in the UV, and float in degrees
+vec2 rotateUV(vec2 uv, float angle) {
+    // recenter
+    uv -=0.5;
+    uv.x*=iResolution.x/iResolution.y;
+    float a = atan(uv.y, uv.x);
+    a+=degreeToRadians(angle);
+    uv = vec2(cos(a),sin(a))*length(uv);
+    
+    uv.x *= iResolution.y/iResolution.x;
+    // recenter
+    uv+=.5;
+    return uv;
+}
+
+
+// Reflects the top to bottom
+vec2 applySymmetry(vec2 uv) {
+    //uv.y=-uv.y;
+    //uv.x=-uv.x;
+    uv.y=abs(uv.y-0.5)+0.5;
+    
+    // piece wise solution
+    //if(uv.y <= 0.5) {
+    
+    //    uv.y = abs(uv.y-1.0);
+    //}
+    return uv;
+}
+
+// Reflects the top to bottom
+vec2 applySymmetryFlipped(vec2 uv) {
+    //uv.y=-uv.y;
+    //uv.x=-uv.x;
+    //if(uv.y >= 0.5) {
+    //    uv.y=abs(uv.y-1.0);
+    //}
+    
+    // 1 to 0
+    // 0 as 0
+    // 0.5 as 0.5
+    
+    //uv.y = 1.0-(abs(uv.y-0.5)+0.5);
+    // basically 1-(applySymmetry()), and then when simplified, makes this
+    uv.y = -abs(uv.y-0.5)+0.5;
+    return uv;
+}
+
+vec2 applyZoom(vec2 uv, float zoom) {
+    // subtract to make center the scale pivot
+    uv-=0.5;
+    uv *= 1.0/zoom;
+    //uv+=0.25;
+    // correct it
+    uv+=0.5;
+    
+    //uv+=0.25;
+    return uv;
+}
+
+
+vec2 cosmicDistortion(vec2 uv, float zoom, float distort) {
+    // subtract to make center the scale pivot
+    uv-=0.5;
+    uv *= 1.0/zoom;
+    float l = length(uv);
+    vec2 originalUV = uv;
+    uv *= smoothstep(.0,distort*(15.0+2.0/iTime),l*(2.0+iTime*1.0));
+    if(length(uv-originalUV)<0.5) {
+        uv = rotateUV(uv,iTime);
+        uv = applyZoom(uv, 1.0/iTime);
+    }
+    //uv=1.0-uv;
+    //uv+=0.25;
+    // correct it
+    uv+=0.5;
+    
+    //uv+=0.25;
+    return uv;
+}
+
+vec2 zoomLinesMotion(vec2 uv, float zoom, float distort) {
+    uv -= 0.5;
+    uv*=1.0/(zoom*length(uv)/iTime);
+    float l = length(uv);
+    //uv*=smoothstep(.0,0.5,l);
+    uv+=0.5;
+    return uv;
+}
+
+vec2 zoomDistort(vec2 uv, float zoom, float distort) {
+    uv -= 0.5;
+    
+    // smaller multiplier means more zoom
+    // bigger means less zoom, more normal
+    uv*=1.0/(zoom);
+    float l = length(uv);
+    uv*=smoothstep(.0,0.5,l*2.0);
+    uv+=0.5;
+    return uv;
+}
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = fragCoord/iResolution.xy;
+    //uv = rotateUV(uv, iTime*30.0);
+    uv = zoomDistort(uv, 1.1, 1.0);
+    
+    // get the image color
+    fragColor = texture(iChannel0, uv);
+    //fragColor = vec4(uv.y, uv.y, uv.y, 1.0);
+    //fragColor = vec4(uv.x, uv.x, uv.x, 1.0);
+}
+
