@@ -94,17 +94,65 @@ vec2 zoomLinesMotion(vec2 uv, float zoom, float distort) {
     return uv;
 }
 
-vec2 zoomDistort(vec2 uv, float zoom, float distort) {
+vec2 distortIn(vec2 uv, float zoom, float distort) {
     uv -= 0.5;
     
     // smaller multiplier means more zoom
     // bigger means less zoom, more normal
     uv*=1.0/(zoom);
     float l = length(uv);
-    uv*=smoothstep(.0,0.5,l*2.0);
+    uv*=smoothstep(1.0*iTime*iTime,.0,l*2.0);
     uv+=0.5;
     return uv;
 }
+
+// explanation of smoothstep
+// smoothstep(x1,x2,x)
+// returns the percentage of x along the range of x1 to x2. this percentage is clamped from 0 to 1
+// values along edges will be tapered due to the "smooth" step
+
+// more zoomed around the edges, i.e edge distortion
+vec2 edgeDistort(vec2 uv, float zoom, float distort) {
+    uv -= 0.5;
+    
+    // smaller multiplier means more zoom
+    // bigger means less zoom, more normal(or just tiles)
+    uv*=1.0/(zoom);
+    float l = length(uv);
+ 
+    // l is smaller in the middle due to the center, but increases from center
+    // i.e l is largest on edges
+    uv*=smoothstep(1.0,0.0,l*1.0);
+    // as x1 increases, the less zoom there is
+    // remember if we scale x1, this causes x to be closer to x2, resulting in larger smoothstep value overall
+    // this means less zoom overall
+    
+    // if x2 is increased, it means any x is closer to the x2, resulting in larger smoothstep value, less zoom
+    uv+=0.5;
+    return uv;
+}
+
+// more zoomed in the center, less zoomed outside
+vec2 zoomDistort(vec2 uv, float zoom, float distort) {
+    uv -= 0.5;
+    
+    // smaller multiplier means more zoom
+    // bigger means less zoom, more normal(or just tiles)
+    uv*=1.0/(zoom);
+    float l = length(uv);
+ 
+    // l is smaller in the middle due to the center, but increases from center
+    // i.e l is largest on edges
+    uv*=smoothstep(0.0, 0.2,l*1.0);
+    // as x2 increases, the more zoom there is
+    // If x2 increases, x will be closer to x1 overall, resulting in smaller smoothstep value
+    // smaller smoothstep values overall means more distortion overall
+
+    uv+=0.5;
+    return uv;
+}
+
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = fragCoord/iResolution.xy;
