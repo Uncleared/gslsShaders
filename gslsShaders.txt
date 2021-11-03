@@ -85,7 +85,7 @@ vec2 cosmicDistortion(vec2 uv, float zoom, float distort) {
     return uv;
 }
 
-vec2 zoomLinesMotion(vec2 uv, float zoom, float distort) {
+vec2 zoomLinesMotion(vec2 uv, float zoom) {
     uv -= 0.5;
     uv*=1.0/(zoom*length(uv)/iTime);
     float l = length(uv);
@@ -93,6 +93,7 @@ vec2 zoomLinesMotion(vec2 uv, float zoom, float distort) {
     uv+=0.5;
     return uv;
 }
+
 
 vec2 distortIn(vec2 uv, float zoom, float distort) {
     uv -= 0.5;
@@ -152,15 +153,76 @@ vec2 zoomDistort(vec2 uv, float zoom, float distort) {
     return uv;
 }
 
+// vital part is the mod function to make things repeat
+vec2 applyRepeat(vec2 uv) {
+    // larger s means less zoomed
+    // smaller s means more zoomed
+    float s = 2.;
+    
+    // c means number of instances essentially
+    // the more divisible the more instances
+    float c = 0.5;
+    uv -= c/2.;
+    uv=mod((uv+c/2.)*s,c);
+    
+    uv+=c/2.;
 
+    
+    return uv;
+
+}
+
+vec2 applyRayon(vec2 uv) {
+    uv-=.5;
+    uv.x*=iResolution.x/iResolution.y;
+    float l = length(uv)+1.;
+    l  = exp(1.);
+    float a = 4.*atan(uv.y,uv.x)/PI;
+    uv=mod(abs(vec2(a,1))+.5,1.0);
+    return uv;
+
+}
+
+// beauty
+vec2 applySpiral(vec2 uv) {
+    float linger = 1.0;
+    uv-=.5;
+    uv.x*=iResolution.x/iResolution.y;
+    float l = length(uv)-.1;
+    float a = atan(uv.y,uv.x);
+    a+=l*(linger*(exp(iTime)/400.));
+    uv=vec2(cos(a),sin(a))*length(uv);
+    uv+=.5;
+    return uv;
+
+}
+float time = 0.0;
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = fragCoord/iResolution.xy;
     //uv = rotateUV(uv, iTime*30.0);
-    uv = zoomDistort(uv, 1.1, 1.0);
+    if(iTime > 2.) { 
+        //uv=applyZoom(uv,clamp(sin(1./iTime-0.1)*1.1,1.,1.1));
+    }
+    uv = applySpiral(uv);
     
     // get the image color
     fragColor = texture(iChannel0, uv);
+    if(iTime > 2. && iTime < 10.) {
+        fragColor *= clamp(sin(1.9/iTime*6.0-1.2)*1.7,1.,1.7);
+    }
+    if(iTime > 16.) {
+        fragColor = fragColor;
+        fragColor *= iTime/13.;
+        fragColor += vec4(0.3,0.1,0.,0.);
+    }
+    
+    else if(iTime > 10.23) {
+        fragColor = 0.8-fragColor;   
+    }
+   
+   
+    
     //fragColor = vec4(uv.y, uv.y, uv.y, 1.0);
     //fragColor = vec4(uv.x, uv.x, uv.x, 1.0);
 }
